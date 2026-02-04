@@ -291,11 +291,6 @@
       <div class="icon">🦀</div>
       <h1>OpenClaw Droplet Manager</h1>
       <p class="subtitle">Create or manage OpenClaw instances on DigitalOcean</p>
-      <div class="input-group">
-        <label for="anthropic-key">Anthropic API Key (optional)</label>
-        <input type="password" id="anthropic-key" placeholder="sk-ant-..." autocomplete="off" spellcheck="false">
-        <div class="input-hint">Written to openclaw.env on the droplet during setup. Leave blank to configure later.</div>
-      </div>
       <button class="btn-create" onclick="createDroplet()">Create New Droplet</button>
       <div class="or-divider"><span>or</span></div>
       <div class="input-group">
@@ -342,9 +337,9 @@
 
       <div id="configure-banner" class="status-banner"></div>
 
-      <div class="action-row" id="action-configure">
-        <button class="btn-action" id="btn-configure" onclick="configureDroplet()">⚙️ Configure &amp; Open Dashboard</button>
-        <div class="status-sub" style="margin-top: 8px;">Sets up auth, writes API key, and opens the dashboard</div>
+      <div class="action-row" id="action-enable-insecure">
+        <button class="btn-action" id="btn-enable-insecure" onclick="enableInsecureAuth()">🔓 Enable Dashboard Access</button>
+        <div class="status-sub" style="margin-top: 8px;">Allows token-only auth for the Control UI</div>
       </div>
 
       <div class="action-row" id="action-dashboard" style="display:none;">
@@ -372,20 +367,29 @@
       <div id="manage-banner" class="status-banner"></div>
 
       <div class="action-row">
-        <button class="btn-action" id="btn-manage-configure" onclick="configureExisting()">⚙️ Configure</button>
-        <div class="status-sub" style="margin-top: 8px;">Enable insecure auth &amp; write API key</div>
+        <button class="btn-action" id="btn-manage-insecure" onclick="enableInsecureAuthManage()">🔓 Enable Dashboard Access</button>
+        <div class="status-sub" style="margin-top: 8px;">Allows token-only auth for the Control UI</div>
       </div>
 
       <div class="action-row">
-        <button class="btn-action" onclick="openDashboardExisting()">🖥️ Open Dashboard</button>
+        <button class="btn-action" onclick="openDashboardManage()">🖥️ Open Dashboard</button>
         <div class="status-sub" style="margin-top: 8px;">Fetches current token and opens the Control UI</div>
       </div>
 
-      <div class="action-row">
-        <button class="btn-secondary" onclick="rotateTokenExisting()">🔄 Rotate Token</button>
+      <hr class="divider">
+
+      <div class="input-group">
+        <label for="manage-api-key">Anthropic API Key</label>
+        <input type="password" id="manage-api-key" placeholder="sk-ant-..." autocomplete="off" spellcheck="false">
+        <div class="input-hint">Write a new API key to openclaw.env on the droplet.</div>
       </div>
+      <button class="btn-action" id="btn-configure-key" onclick="configureApiKey()">💾 Save API Key</button>
 
       <hr class="divider">
+
+      <div class="action-row">
+        <button class="btn-secondary" onclick="rotateToken()">🔄 Rotate Token</button>
+      </div>
 
       <div class="ssh-cmd" onclick="copySSHManage()" title="Click to copy">
         ssh root@<span id="manage-ssh-ip">—</span>
@@ -406,13 +410,11 @@
 
   <script>
     // --- Config ---
-    const PROXY_URL = window.PROXY_URL || 'http://PROXY_IP:3001'
+    const PROXY_URL = window.PROXY_URL || 'http://104.131.172.130:3001'
 
     let currentDropletId = null
     let currentDropletIp = null
     let manageIp = null
-    let savedAnthropicKey = null
-    let isConfigured = false
     let pollInterval = null
 
     function showState(id) {
@@ -429,7 +431,6 @@
     // --- Create New ---
     async function createDroplet() {
       showState('provisioning')
-      savedAnthropicKey = document.getElementById('anthropic-key').value.trim() || null
 
       try {
         const res = await fetch('/api/droplets', { method: 'POST' })
@@ -466,10 +467,9 @@
           document.getElementById('droplet-disk').textContent = `${data.disk} GB`
           document.getElementById('ssh-ip').textContent = data.ip
 
-          isConfigured = false
-          document.getElementById('action-configure').style.display = ''
+          document.getElementById('action-enable-insecure').style.display = ''
           document.getElementById('action-dashboard').style.display = 'none'
-          setBanner('configure-banner', 'info', 'Droplet is booting up OpenClaw — wait ~30 seconds before configuring.')
+          setBanner('configure-banner', 'info', 'Droplet is booting up OpenClaw — wait ~30 seconds before enabling dashboard access.')
 
           showState('success')
         }
@@ -478,39 +478,33 @@
       }
     }
 
-    // --- Configure (new droplet) ---
-    async function configureDroplet() {
+    // --- Enable Insecure Auth (new droplet) ---
+    async function enableInsecureAuth() {
       if (!currentDropletIp) return
 
-      const btn = document.getElementById('btn-configure')
+      const btn = document.getElementById('btn-enable-insecure')
       btn.disabled = true
-      btn.textContent = '⏳ Configuring...'
+      btn.textContent = '⏳ Enabling...'
       setBanner('configure-banner', 'info', 'Connecting to droplet via SSH — this may take a moment...')
 
       try {
-        const body = {}
-        if (savedAnthropicKey) body.anthropicKey = savedAnthropicKey
-
-        const res = await fetch(`${PROXY_URL}/api/droplets/${currentDropletIp}/configure`, {
+        const res = await fetch(`${PROXY_URL}/api/droplets/${currentDropletIp}/insecure`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
         })
         const data = await res.json()
 
-        if (!res.ok) throw new Error(data.error || 'Configure failed')
+        if (!res.ok) throw new Error(data.error || 'Failed to enable insecure auth')
 
-        isConfigured = true
-        setBanner('configure-banner', 'success', '✅ Configured! Opening dashboard...')
+        setBanner('configure-banner', 'success', '✅ Dashboard access enabled! Opening dashboard...')
 
-        document.getElementById('action-configure').style.display = 'none'
+        document.getElementById('action-enable-insecure').style.display = 'none'
         document.getElementById('action-dashboard').style.display = ''
 
         await openDashboard()
       } catch (err) {
         setBanner('configure-banner', 'error', `❌ ${err.message}`)
         btn.disabled = false
-        btn.textContent = '⚙️ Configure & Open Dashboard'
+        btn.textContent = '🔓 Enable Dashboard Access'
       }
     }
 
@@ -534,51 +528,45 @@
       const ip = document.getElementById('existing-ip').value.trim()
       if (!ip) return alert('Please enter an IP address')
 
-      // Basic IP validation
       if (!/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(ip)) {
         return alert('Please enter a valid IP address')
       }
 
       manageIp = ip
-      savedAnthropicKey = document.getElementById('anthropic-key').value.trim() || null
       document.getElementById('manage-ip').textContent = ip
       document.getElementById('manage-ssh-ip').textContent = ip
       document.getElementById('manage-banner').className = 'status-banner'
+      document.getElementById('manage-api-key').value = ''
 
       showState('manage')
     }
 
-    async function configureExisting() {
+    async function enableInsecureAuthManage() {
       if (!manageIp) return
 
-      const btn = document.getElementById('btn-manage-configure')
+      const btn = document.getElementById('btn-manage-insecure')
       btn.disabled = true
-      btn.textContent = '⏳ Configuring...'
+      btn.textContent = '⏳ Enabling...'
       setBanner('manage-banner', 'info', 'Connecting to droplet via SSH — this may take a moment...')
 
       try {
-        const body = {}
-        if (savedAnthropicKey) body.anthropicKey = savedAnthropicKey
-
-        const res = await fetch(`${PROXY_URL}/api/droplets/${manageIp}/configure`, {
+        const res = await fetch(`${PROXY_URL}/api/droplets/${manageIp}/insecure`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
         })
         const data = await res.json()
 
-        if (!res.ok) throw new Error(data.error || 'Configure failed')
+        if (!res.ok) throw new Error(data.error || 'Failed to enable insecure auth')
 
-        setBanner('manage-banner', 'success', '✅ Droplet configured successfully!')
+        setBanner('manage-banner', 'success', '✅ Dashboard access enabled!')
       } catch (err) {
         setBanner('manage-banner', 'error', `❌ ${err.message}`)
       } finally {
         btn.disabled = false
-        btn.textContent = '⚙️ Configure'
+        btn.textContent = '🔓 Enable Dashboard Access'
       }
     }
 
-    async function openDashboardExisting() {
+    async function openDashboardManage() {
       if (!manageIp) return
 
       setBanner('manage-banner', 'info', 'Fetching dashboard token...')
@@ -596,7 +584,38 @@
       }
     }
 
-    async function rotateTokenExisting() {
+    async function configureApiKey() {
+      if (!manageIp) return
+
+      const apiKey = document.getElementById('manage-api-key').value.trim()
+      if (!apiKey) return alert('Please enter an API key')
+
+      const btn = document.getElementById('btn-configure-key')
+      btn.disabled = true
+      btn.textContent = '⏳ Saving...'
+      setBanner('manage-banner', 'info', 'Writing API key to droplet...')
+
+      try {
+        const res = await fetch(`${PROXY_URL}/api/droplets/${manageIp}/configure`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ anthropicKey: apiKey }),
+        })
+        const data = await res.json()
+
+        if (!res.ok) throw new Error(data.error || 'Failed to save API key')
+
+        setBanner('manage-banner', 'success', '✅ API key saved!')
+        document.getElementById('manage-api-key').value = ''
+      } catch (err) {
+        setBanner('manage-banner', 'error', `❌ ${err.message}`)
+      } finally {
+        btn.disabled = false
+        btn.textContent = '💾 Save API Key'
+      }
+    }
+
+    async function rotateToken() {
       if (!manageIp) return
       if (!confirm('Rotate the gateway token? This will invalidate the current token.')) return
 
@@ -639,9 +658,6 @@
       currentDropletId = null
       currentDropletIp = null
       manageIp = null
-      savedAnthropicKey = null
-      isConfigured = false
-      document.getElementById('anthropic-key').value = ''
       document.getElementById('existing-ip').value = ''
       document.getElementById('configure-banner').className = 'status-banner'
       document.getElementById('manage-banner').className = 'status-banner'
