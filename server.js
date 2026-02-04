@@ -29,7 +29,7 @@ app.post('/api/droplets', async (req, res) => {
     name: dropletName,
     region: REGION,
     size: 's-2vcpu-4gb',        // Pro plan specs from sunnyside-ai
-    image: 'moltbot',           // OpenClaw 1-Click marketplace image
+    image: 'openclaw',          // OpenClaw 1-Click marketplace image
     ssh_keys: SSH_KEY_ID ? [SSH_KEY_ID] : [],
     backups: false,
     ipv6: true,
