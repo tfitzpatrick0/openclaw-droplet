@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenClaw Droplet Manager</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a0a;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .container {
+      max-width: 500px;
+      width: 100%;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: #888;
+      font-size: 16px;
+      margin-bottom: 40px;
+    }
+
+    /* States */
+    .state { display: none; }
+    .state.active { display: block; }
+
+    /* Buttons */
+    .btn-create {
+      background: #ff6b35;
+      color: #fff;
+      border: none;
+      padding: 16px 40px;
+      font-size: 18px;
+      font-weight: 600;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 100%;
+    }
+    .btn-create:hover { background: #e55a2b; transform: translateY(-1px); }
+    .btn-create:active { transform: translateY(0); }
+    .btn-create:disabled { background: #444; cursor: not-allowed; transform: none; }
+
+    .btn-manage {
+      background: transparent;
+      color: #ff6b35;
+      border: 1px solid #ff6b35;
+      padding: 16px 40px;
+      font-size: 18px;
+      font-weight: 600;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 100%;
+      margin-top: 12px;
+    }
+    .btn-manage:hover { background: rgba(255,107,53,0.1); transform: translateY(-1px); }
+
+    .btn-action {
+      display: inline-block;
+      background: #ff6b35;
+      color: #fff;
+      border: none;
+      text-decoration: none;
+      padding: 14px 32px;
+      font-size: 16px;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin: 6px;
+    }
+    .btn-action:hover { background: #e55a2b; transform: translateY(-1px); }
+    .btn-action:disabled { background: #444; cursor: not-allowed; transform: none; }
+
+    .btn-secondary {
+      background: transparent;
+      color: #ff6b35;
+      border: 1px solid #ff6b35;
+      padding: 12px 30px;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      margin: 6px;
+      transition: all 0.2s;
+    }
+    .btn-secondary:hover { background: rgba(255,107,53,0.1); }
+
+    /* Input */
+    .input-group {
+      text-align: left;
+      margin-bottom: 24px;
+    }
+    .input-group label {
+      display: block;
+      font-size: 12px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 8px;
+    }
+    .input-group input {
+      width: 100%;
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: #fff;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .input-group input::placeholder { color: #444; }
+    .input-group input:focus { border-color: #ff6b35; }
+    .input-hint {
+      font-size: 11px;
+      color: #555;
+      margin-top: 6px;
+    }
+
+    /* Provisioning */
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid #222;
+      border-top-color: #ff6b35;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .status-text {
+      color: #ff6b35;
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .status-sub {
+      color: #666;
+      font-size: 14px;
+    }
+
+    /* Success */
+    .success-icon {
+      font-size: 56px;
+      margin-bottom: 16px;
+    }
+
+    .ip-box {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 24px 0;
+    }
+
+    .ip-label {
+      font-size: 12px;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+
+    .ip-value {
+      font-size: 28px;
+      font-weight: 700;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      color: #4ade80;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 20px 0;
+    }
+
+    .info-item {
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 8px;
+      padding: 12px;
+      text-align: left;
+    }
+
+    .info-item .label {
+      font-size: 11px;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .info-item .value {
+      font-size: 16px;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+
+    .ssh-cmd {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 14px 20px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 14px;
+      color: #4ade80;
+      margin: 16px 0;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .ssh-cmd:hover { border-color: #4ade80; }
+
+    /* Status banner */
+    .status-banner {
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      margin: 12px 0;
+      display: none;
+    }
+    .status-banner.info { display: block; background: #1a1a2e; border: 1px solid #333; color: #888; }
+    .status-banner.success { display: block; background: #0a2a1a; border: 1px solid #1a4a2a; color: #4ade80; }
+    .status-banner.error { display: block; background: #2a0a0a; border: 1px solid #4a1a1a; color: #f87171; }
+
+    /* Action row */
+    .action-row {
+      margin: 20px 0;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid #222;
+      margin: 20px 0;
+    }
+
+    .or-divider {
+      display: flex;
+      align-items: center;
+      margin: 20px 0;
+      color: #444;
+      font-size: 13px;
+    }
+    .or-divider::before, .or-divider::after {
+      content: '';
+      flex: 1;
+      border-top: 1px solid #222;
+    }
+    .or-divider span {
+      padding: 0 16px;
+    }
+
+    /* Error */
+    .error-text {
+      color: #f87171;
+      font-size: 16px;
+      margin: 16px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- IDLE STATE -->
+    <div id="state-idle" class="state active">
+      <div class="icon">🦀</div>
+      <h1>OpenClaw Droplet Manager</h1>
+      <p class="subtitle">Create or manage OpenClaw instances on DigitalOcean</p>
+      <div class="input-group">
+        <label for="anthropic-key">Anthropic API Key (optional)</label>
+        <input type="password" id="anthropic-key" placeholder="sk-ant-..." autocomplete="off" spellcheck="false">
+        <div class="input-hint">Written to openclaw.env on the droplet during setup. Leave blank to configure later.</div>
+      </div>
+      <button class="btn-create" onclick="createDroplet()">Create New Droplet</button>
+      <div class="or-divider"><span>or</span></div>
+      <div class="input-group">
+        <label for="existing-ip">Manage Existing Droplet</label>
+        <input type="text" id="existing-ip" placeholder="e.g. 157.245.242.172" autocomplete="off" spellcheck="false">
+        <div class="input-hint">Enter the IP address of an existing OpenClaw droplet.</div>
+      </div>
+      <button class="btn-manage" onclick="manageExisting()">Manage Droplet</button>
+    </div>
+
+    <!-- PROVISIONING STATE -->
+    <div id="state-provisioning" class="state">
+      <div class="spinner"></div>
+      <div class="status-text" id="provision-title">Creating your droplet...</div>
+      <div class="status-sub" id="provision-sub">This usually takes 1-2 minutes</div>
+    </div>
+
+    <!-- SUCCESS STATE (new droplet) -->
+    <div id="state-success" class="state">
+      <div class="success-icon">✅</div>
+      <h1>Droplet is online!</h1>
+      <div class="ip-box">
+        <div class="ip-label">IP Address</div>
+        <div class="ip-value" id="droplet-ip">—</div>
+      </div>
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="label">Name</div>
+          <div class="value" id="droplet-name">—</div>
+        </div>
+        <div class="info-item">
+          <div class="label">Region</div>
+          <div class="value" id="droplet-region">—</div>
+        </div>
+        <div class="info-item">
+          <div class="label">CPU / RAM</div>
+          <div class="value" id="droplet-specs">—</div>
+        </div>
+        <div class="info-item">
+          <div class="label">Disk</div>
+          <div class="value" id="droplet-disk">—</div>
+        </div>
+      </div>
+
+      <div id="configure-banner" class="status-banner"></div>
+
+      <div class="action-row" id="action-configure">
+        <button class="btn-action" id="btn-configure" onclick="configureDroplet()">⚙️ Configure &amp; Open Dashboard</button>
+        <div class="status-sub" style="margin-top: 8px;">Sets up auth, writes API key, and opens the dashboard</div>
+      </div>
+
+      <div class="action-row" id="action-dashboard" style="display:none;">
+        <button class="btn-action" onclick="openDashboard()">🖥️ Open Dashboard</button>
+      </div>
+
+      <hr class="divider">
+
+      <div class="ssh-cmd" id="ssh-cmd" onclick="copySSH()" title="Click to copy">
+        ssh root@<span id="ssh-ip">—</span>
+      </div>
+      <div class="status-sub" id="copy-hint">Click to copy SSH command</div>
+      <button class="btn-secondary" onclick="reset()">← Back</button>
+    </div>
+
+    <!-- MANAGE STATE (existing droplet) -->
+    <div id="state-manage" class="state">
+      <div class="icon">🔧</div>
+      <h1>Manage Droplet</h1>
+      <div class="ip-box">
+        <div class="ip-label">IP Address</div>
+        <div class="ip-value" id="manage-ip">—</div>
+      </div>
+
+      <div id="manage-banner" class="status-banner"></div>
+
+      <div class="action-row">
+        <button class="btn-action" id="btn-manage-configure" onclick="configureExisting()">⚙️ Configure</button>
+        <div class="status-sub" style="margin-top: 8px;">Enable insecure auth &amp; write API key</div>
+      </div>
+
+      <div class="action-row">
+        <button class="btn-action" onclick="openDashboardExisting()">🖥️ Open Dashboard</button>
+        <div class="status-sub" style="margin-top: 8px;">Fetches current token and opens the Control UI</div>
+      </div>
+
+      <div class="action-row">
+        <button class="btn-secondary" onclick="rotateTokenExisting()">🔄 Rotate Token</button>
+      </div>
+
+      <hr class="divider">
+
+      <div class="ssh-cmd" onclick="copySSHManage()" title="Click to copy">
+        ssh root@<span id="manage-ssh-ip">—</span>
+      </div>
+      <div class="status-sub" id="manage-copy-hint">Click to copy SSH command</div>
+      <button class="btn-secondary" onclick="reset()">← Back</button>
+    </div>
+
+    <!-- ERROR STATE -->
+    <div id="state-error" class="state">
+      <div class="icon">⚠️</div>
+      <h1>Something went wrong</h1>
+      <p class="error-text" id="error-msg">Unknown error</p>
+      <button class="btn-secondary" onclick="reset()">Try Again</button>
+    </div>
+
+  </div>
+
+  <script>
+    // --- Config ---
+    const PROXY_URL = window.PROXY_URL || 'http://PROXY_IP:3001'
+
+    let currentDropletId = null
+    let currentDropletIp = null
+    let manageIp = null
+    let savedAnthropicKey = null
+    let isConfigured = false
+    let pollInterval = null
+
+    function showState(id) {
+      document.querySelectorAll('.state').forEach(el => el.classList.remove('active'))
+      document.getElementById(`state-${id}`).classList.add('active')
+    }
+
+    function setBanner(id, type, message) {
+      const banner = document.getElementById(id)
+      banner.className = `status-banner ${type}`
+      banner.textContent = message
+    }
+
+    // --- Create New ---
+    async function createDroplet() {
+      showState('provisioning')
+      savedAnthropicKey = document.getElementById('anthropic-key').value.trim() || null
+
+      try {
+        const res = await fetch('/api/droplets', { method: 'POST' })
+        const data = await res.json()
+
+        if (!res.ok) throw new Error(data.error || 'Failed to create droplet')
+
+        currentDropletId = data.dropletId
+        document.getElementById('provision-sub').textContent =
+          `Droplet ${data.name} created — waiting for it to come online...`
+
+        pollInterval = setInterval(pollStatus, 3000)
+      } catch (err) {
+        document.getElementById('error-msg').textContent = err.message
+        showState('error')
+      }
+    }
+
+    async function pollStatus() {
+      if (!currentDropletId) return
+
+      try {
+        const res = await fetch(`/api/droplets/${currentDropletId}`)
+        const data = await res.json()
+
+        if (data.status === 'active' && data.ip) {
+          clearInterval(pollInterval)
+          currentDropletIp = data.ip
+
+          document.getElementById('droplet-ip').textContent = data.ip
+          document.getElementById('droplet-name').textContent = data.name
+          document.getElementById('droplet-region').textContent = (data.region || 'nyc1').toUpperCase()
+          document.getElementById('droplet-specs').textContent = `${data.vcpus} vCPU / ${(data.memory / 1024).toFixed(0)} GB`
+          document.getElementById('droplet-disk').textContent = `${data.disk} GB`
+          document.getElementById('ssh-ip').textContent = data.ip
+
+          isConfigured = false
+          document.getElementById('action-configure').style.display = ''
+          document.getElementById('action-dashboard').style.display = 'none'
+          setBanner('configure-banner', 'info', 'Droplet is booting up OpenClaw — wait ~30 seconds before configuring.')
+
+          showState('success')
+        }
+      } catch (err) {
+        // Keep polling
+      }
+    }
+
+    // --- Configure (new droplet) ---
+    async function configureDroplet() {
+      if (!currentDropletIp) return
+
+      const btn = document.getElementById('btn-configure')
+      btn.disabled = true
+      btn.textContent = '⏳ Configuring...'
+      setBanner('configure-banner', 'info', 'Connecting to droplet via SSH — this may take a moment...')
+
+      try {
+        const body = {}
+        if (savedAnthropicKey) body.anthropicKey = savedAnthropicKey
+
+        const res = await fetch(`${PROXY_URL}/api/droplets/${currentDropletIp}/configure`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+        const data = await res.json()
+
+        if (!res.ok) throw new Error(data.error || 'Configure failed')
+
+        isConfigured = true
+        setBanner('configure-banner', 'success', '✅ Configured! Opening dashboard...')
+
+        document.getElementById('action-configure').style.display = 'none'
+        document.getElementById('action-dashboard').style.display = ''
+
+        await openDashboard()
+      } catch (err) {
+        setBanner('configure-banner', 'error', `❌ ${err.message}`)
+        btn.disabled = false
+        btn.textContent = '⚙️ Configure & Open Dashboard'
+      }
+    }
+
+    async function openDashboard() {
+      if (!currentDropletIp) return
+
+      try {
+        const res = await fetch(`${PROXY_URL}/api/droplets/${currentDropletIp}/dashboard`)
+        const data = await res.json()
+
+        if (!res.ok) throw new Error(data.error || 'Failed to get dashboard URL')
+
+        window.open(data.dashboardUrl, '_blank')
+      } catch (err) {
+        setBanner('configure-banner', 'error', `❌ ${err.message}`)
+      }
+    }
+
+    // --- Manage Existing ---
+    function manageExisting() {
+      const ip = document.getElementById('existing-ip').value.trim()
+      if (!ip) return alert('Please enter an IP address')
+
+      // Basic IP validation
+      if (!/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(ip)) {
+        return alert('Please enter a valid IP address')
+      }
+
+      manageIp = ip
+      savedAnthropicKey = document.getElementById('anthropic-key').value.trim() || null
+      document.getElementById('manage-ip').textContent = ip
+      document.getElementById('manage-ssh-ip').textContent = ip
+      document.getElementById('manage-banner').className = 'status-banner'
+
+      showState('manage')
+    }
+
+    async function configureExisting() {
+      if (!manageIp) return
+
+      const btn = document.getElementById('btn-manage-configure')
+      btn.disabled = true
+      btn.textContent = '⏳ Configuring...'
+      setBanner('manage-banner', 'info', 'Connecting to droplet via SSH — this may take a moment...')
+
+      try {
+        const body = {}
+        if (savedAnthropicKey) body.anthropicKey = savedAnthropicKey
+
+        const res = await fetch(`${PROXY_URL}/api/droplets/${manageIp}/configure`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+        const data = await res.json()
+
+        if (!res.ok) throw new Error(data.error || 'Configure failed')
+
+        setBanner('manage-banner', 'success', '✅ Droplet configured successfully!')
+      } catch (err) {
+        setBanner('manage-banner', 'error', `❌ ${err.message}`)
+      } finally {
+        btn.disabled = false
+        btn.textContent = '⚙️ Configure'
+      }
+    }
+
+    async function openDashboardExisting() {
+      if (!manageIp) return
+
+      setBanner('manage-banner', 'info', 'Fetching dashboard token...')
+
+      try {
+        const res = await fetch(`${PROXY_URL}/api/droplets/${manageIp}/dashboard`)
+        const data = await res.json()
+
+        if (!res.ok) throw new Error(data.error || 'Failed to get dashboard URL')
+
+        setBanner('manage-banner', 'success', '✅ Opening dashboard...')
+        window.open(data.dashboardUrl, '_blank')
+      } catch (err) {
+        setBanner('manage-banner', 'error', `❌ ${err.message}`)
+      }
+    }
+
+    async function rotateTokenExisting() {
+      if (!manageIp) return
+      if (!confirm('Rotate the gateway token? This will invalidate the current token.')) return
+
+      setBanner('manage-banner', 'info', 'Rotating token...')
+
+      try {
+        const res = await fetch(`${PROXY_URL}/api/droplets/${manageIp}/rotate-token`, {
+          method: 'POST',
+        })
+        const data = await res.json()
+
+        if (!res.ok) throw new Error(data.error || 'Rotate failed')
+
+        setBanner('manage-banner', 'success', '✅ Token rotated! Use "Open Dashboard" to get the new URL.')
+      } catch (err) {
+        setBanner('manage-banner', 'error', `❌ ${err.message}`)
+      }
+    }
+
+    // --- Utilities ---
+    function copySSH() {
+      const ip = document.getElementById('ssh-ip').textContent
+      navigator.clipboard.writeText(`ssh root@${ip}`)
+      document.getElementById('copy-hint').textContent = 'Copied!'
+      setTimeout(() => {
+        document.getElementById('copy-hint').textContent = 'Click to copy SSH command'
+      }, 2000)
+    }
+
+    function copySSHManage() {
+      navigator.clipboard.writeText(`ssh root@${manageIp}`)
+      document.getElementById('manage-copy-hint').textContent = 'Copied!'
+      setTimeout(() => {
+        document.getElementById('manage-copy-hint').textContent = 'Click to copy SSH command'
+      }, 2000)
+    }
+
+    function reset() {
+      clearInterval(pollInterval)
+      currentDropletId = null
+      currentDropletIp = null
+      manageIp = null
+      savedAnthropicKey = null
+      isConfigured = false
+      document.getElementById('anthropic-key').value = ''
+      document.getElementById('existing-ip').value = ''
+      document.getElementById('configure-banner').className = 'status-banner'
+      document.getElementById('manage-banner').className = 'status-banner'
+      showState('idle')
+    }
+  </script>
+</body>
+</html>
