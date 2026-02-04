@@ -8,7 +8,7 @@ app.use(express.static(path.join(__dirname, 'public')))
 
 const DO_API = 'https://api.digitalocean.com/v2'
 const DO_TOKEN = process.env.DO_API_TOKEN
-const SSH_KEY_IDS = process.env.DO_SSH_KEY_IDS ? process.env.DO_SSH_KEY_IDS.split(',').map(k => k.trim()) : []
+const SSH_KEY_ID = process.env.DO_SSH_KEY_ID
 const REGION = process.env.DO_REGION || 'nyc1'
 const PORT = process.env.PORT || 3000
 
@@ -30,7 +30,7 @@ app.post('/api/droplets', async (req, res) => {
     region: REGION,
     size: 's-2vcpu-4gb',        // Pro plan specs from sunnyside-ai
     image: 'moltbot',           // OpenClaw 1-Click marketplace image
-    ssh_keys: SSH_KEY_IDS,
+    ssh_keys: SSH_KEY_ID ? [SSH_KEY_ID] : [],
     backups: false,
     ipv6: true,
     monitoring: true,
