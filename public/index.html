@@ -387,10 +387,6 @@
 
       <hr class="divider">
 
-      <div class="action-row">
-        <button class="btn-secondary" onclick="rotateToken()">🔄 Rotate Token</button>
-      </div>
-
       <div class="ssh-cmd" onclick="copySSHManage()" title="Click to copy">
         ssh root@<span id="manage-ssh-ip">—</span>
       </div>
@@ -612,26 +608,6 @@
       } finally {
         btn.disabled = false
         btn.textContent = '💾 Save API Key'
-      }
-    }
-
-    async function rotateToken() {
-      if (!manageIp) return
-      if (!confirm('Rotate the gateway token? This will invalidate the current token.')) return
-
-      setBanner('manage-banner', 'info', 'Rotating token...')
-
-      try {
-        const res = await fetch(`${PROXY_URL}/api/droplets/${manageIp}/rotate-token`, {
-          method: 'POST',
-        })
-        const data = await res.json()
-
-        if (!res.ok) throw new Error(data.error || 'Rotate failed')
-
-        setBanner('manage-banner', 'success', '✅ Token rotated! Use "Open Dashboard" to get the new URL.')
-      } catch (err) {
-        setBanner('manage-banner', 'error', `❌ ${err.message}`)
       }
     }
 
