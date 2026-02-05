@@ -15,6 +15,12 @@ const PORT = process.env.PORT || 3000
 // Store active droplets (in-memory for simplicity)
 const droplets = new Map()
 
+// Cloud-init script to disable the interactive setup wizard
+const USER_DATA = `#!/bin/bash
+# Remove setup_wizard from root's bashrc so it doesn't run on first SSH
+sed -i '/setup_wizard/d' /root/.bashrc
+`
+
 // ---------- API Routes ----------
 
 // Create a new droplet
@@ -35,6 +41,7 @@ app.post('/api/droplets', async (req, res) => {
     ipv6: true,
     monitoring: true,
     tags: ['openclaw'],
+    user_data: USER_DATA,
   }
 
   try {
